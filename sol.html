@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frequency Player</title>
+  <meta property="og:title" content="Frequency Player" />
+  <meta property="og:description" content="Play tones corresponding to different tuning systems and scales." />
+  <meta property="og:image" content="https://example.com/tuning-fork-image.jpg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://example.com/frequency-player" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    .button {
+      margin: 10px;
+      padding: 15px 30px;
+      font-size: 16px;
+      color: white;
+      background-color: #007BFF;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .button.active {
+      background-color: #28a745;
+    }
+    .button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h1>Frequency Player</h1>
+  <p>Click a button to toggle a pure tone at the corresponding frequency.</p>
+
+  <h2>Solfeggio Frequencies</h2>
+  <div id="solfeggio-buttons"></div>
+
+  <h2>A Minor Scale (A = 432 Hz, Equal Temperament)</h2>
+  <div id="scale-432-equal-buttons"></div>
+
+  <h2>A Minor Scale (A = 440 Hz, Equal Temperament)</h2>
+  <div id="scale-440-equal-buttons"></div>
+
+  <h2>A Minor Scale (A = 432 Hz, Just Temperament)</h2>
+  <div id="scale-432-just-buttons"></div>
+
+  <h2>A Minor Scale (A = 440 Hz, Just Temperament)</h2>
+  <div id="scale-440-just-buttons"></div>
+
+  <script>
+    // List of Solfeggio frequencies
+    const solfeggioFrequencies = [
+      174, 285, 396, 417, 528, 639, 741, 852, 963
+    ];
+
+    // A Minor scale frequencies with A = 432 Hz (Equal Temperament)
+    const aMinorScale432Equal = [
+      432,
+      484.898, // B
+      513.737, // C
+      576.652, // D
+      648.662, // E
+      684.364, // F
+      768.525, // G
+      864.000  // A (octave)
+    ].map(freq => parseFloat(freq.toFixed(3))); // Round to 3 decimal places
+
+    // A Minor scale frequencies with A = 440 Hz (Equal Temperament)
+    const aMinorScale440Equal = [
+      440,
+      493.883, // B
+      523.251, // C
+      587.330, // D
+      659.255, // E
+      698.456, // F
+      783.991, // G
+      880.000  // A (octave)
+    ].map(freq => parseFloat(freq.toFixed(3))); // Round to 3 decimal places
+
+    // A Minor scale frequencies with A = 432 Hz (Just Temperament)
+    const aMinorScale432Just = [
+      432,
+      486,     // B (9/8 ratio)
+      512,     // C (4/3 ratio)
+      576,     // D (3/2 ratio)
+      648,     // E (5/3 ratio)
+      729,     // F (27/16 ratio)
+      768,     // G (2/1 ratio)
+      864      // A (octave)
+    ].map(freq => parseFloat(freq.toFixed(3))); // Round to 3 decimal places
+
+    // A Minor scale frequencies with A = 440 Hz (Just Temperament)
+    const aMinorScale440Just = [
+      440,
+      495,     // B (9/8 ratio)
+      528,     // C (4/3 ratio)
+      594,     // D (3/2 ratio)
+      660,     // E (5/3 ratio)
+      742.5,   // F (27/16 ratio)
+      792,     // G (2/1 ratio)
+      880      // A (octave)
+    ].map(freq => parseFloat(freq.toFixed(3))); // Round to 3 decimal places
+
+    // Create an AudioContext
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Map to store active oscillators
+    const activeOscillators = new Map();
+
+    // Function to start a tone
+    function startTone(frequency) {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.type = "sine"; // Pure tone
+      oscillator.frequency.value = frequency;
+
+      // Connect oscillator to gain and gain to audio output
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      // Set initial volume and fade in
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.05);
+
+      // Start oscillator
+      oscillator.start();
+
+      // Store the oscillator and gain node
+      activeOscillators.set(frequency, { oscillator, gainNode });
+    }
+
+    // Function to stop a tone
+    function stopTone(frequency) {
+      const { oscillator, gainNode } = activeOscillators.get(frequency);
+      if (oscillator && gainNode) {
+        // Fade out and stop
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.05);
+        oscillator.stop(audioContext.currentTime + 0.05);
+        activeOscillators.delete(frequency);
+      }
+    }
+
+    // Toggle tone playback
+    function toggleTone(button, frequency) {
+      if (activeOscillators.has(frequency)) {
+        stopTone(frequency);
+        button.classList.remove('active');
+      } else {
+        startTone(frequency);
+        button.classList.add('active');
+      }
+    }
+
+    // Create buttons dynamically for a given frequency list
+    function createButtons(containerId, frequencies) {
+      const container = document.getElementById(containerId);
+      frequencies.forEach(frequency => {
+        const button = document.createElement('button');
+        button.className = 'button';
+        button.textContent = `${frequency} Hz`;
+        button.onclick = () => toggleTone(button, frequency);
+        container.appendChild(button);
+      });
+    }
+
+    // Create buttons for all frequency groups
+    createButtons('solfeggio-buttons', solfeggioFrequencies);
+    createButtons('scale-432-equal-buttons', aMinorScale432Equal);
+    createButtons('scale-440-equal-buttons', aMinorScale440Equal);
+    createButtons('scale-432-just-buttons', aMinorScale432Just);
+    createButtons('scale-440-just-buttons', aMinorScale440Just);
+  </script>
+</body>
+</html>
